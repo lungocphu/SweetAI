@@ -1,0 +1,7 @@
+{
+  "name": "SweetScoutAI",
+  "description": "An intelligent market research assistant for confectionery products (candies and cakes). It uses Google Search to provide up-to-date comparisons on pricing, characteristics, and consumer insights.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
