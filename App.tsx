@@ -207,11 +207,11 @@ const App: React.FC = () => {
         null, // Context is maintained by session
         language,
         selectedAttributes,
-        (textChunk, sources, chartData) => {
+        (textChunk, sources, chartData, comparisonData) => {
           setMessages(prev => 
             prev.map(msg => 
               msg.id === botMessageId 
-                ? { ...msg, text: textChunk, sources: sources, chartData: chartData } 
+                ? { ...msg, text: textChunk, sources: sources, chartData: chartData, comparisonData: comparisonData } 
                 : msg
             )
           );
@@ -320,11 +320,11 @@ const App: React.FC = () => {
         currentImage, 
         language, 
         selectedAttributes,
-        (textChunk, sources, chartData) => {
+        (textChunk, sources, chartData, comparisonData) => {
           setMessages(prev => 
             prev.map(msg => 
               msg.id === botMessageId 
-                ? { ...msg, text: textChunk, sources: sources, chartData: chartData } 
+                ? { ...msg, text: textChunk, sources: sources, chartData: chartData, comparisonData: comparisonData } 
                 : msg
             )
           );

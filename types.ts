@@ -10,22 +10,6 @@ export interface GroundingChunk {
   };
 }
 
-export interface Message {
-  id: string;
-  role: 'user' | 'model';
-  text: string;
-  image?: string;
-  sources?: GroundingChunk[];
-  isStreaming?: boolean;
-  timestamp: number;
-  chartData?: ChartData;
-}
-
-export interface ChatState {
-  messages: Message[];
-  isLoading: boolean;
-}
-
 export interface ChartData {
   type: 'bar' | 'radar';
   title?: string;
@@ -35,4 +19,28 @@ export interface ChartData {
     data: number[]; // The values
     color?: string;
   }[];
+}
+
+export interface ComparisonData {
+  type: 'comparison_data';
+  title?: string;
+  headers: string[];
+  rows: string[][];
+}
+
+export interface Message {
+  id: string;
+  role: 'user' | 'model';
+  text: string;
+  image?: string;
+  sources?: GroundingChunk[];
+  isStreaming?: boolean;
+  timestamp: number;
+  chartData?: ChartData;
+  comparisonData?: ComparisonData;
+}
+
+export interface ChatState {
+  messages: Message[];
+  isLoading: boolean;
 }

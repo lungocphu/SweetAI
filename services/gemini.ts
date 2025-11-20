@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
-import { GroundingChunk, Language, ComparisonAttribute, ChartData } from "../types";
+import { GroundingChunk, Language, ComparisonAttribute, ChartData, ComparisonData } from "../types";
 
 const apiKey = process.env.API_KEY;
 
@@ -40,6 +40,20 @@ When comparing products, you MUST provide data to generate a chart at the end of
   "series": [
     { "label": "Product A", "data": [15, 4.5, 8] },
     { "label": "Product B", "data": [12, 4.0, 6] }
+  ]
+}
+\`\`\`
+
+### 4. Data Export (CRITICAL)
+If you generate a comparison table, you MUST ALSO generate a separate JSON block for data export containing the raw table data.
+- **JSON Format**:
+\`\`\`json
+{
+  "type": "comparison_data",
+  "headers": ["Product", "Price", "Flavor"],
+  "rows": [
+    ["Product A", "10000", "Sweet"],
+    ["Product B", "12000", "Salty"]
   ]
 }
 \`\`\`
@@ -110,7 +124,7 @@ export const sendMessageStream = async (
   imageBase64: string | null,
   language: Language,
   comparisonAttributes: ComparisonAttribute[],
-  onChunk: (text: string, sources: GroundingChunk[], chartData?: ChartData) => void
+  onChunk: (text: string, sources: GroundingChunk[], chartData?: ChartData, comparisonData?: ComparisonData) => void
 ) => {
   if (!process.env.API_KEY) {
       throw new Error("API_KEY_MISSING");
@@ -138,7 +152,7 @@ export const sendMessageStream = async (
       attributeInstruction = `\n\nFOR COMPARISON TABLES: Include columns for Price, Flavor, Ingredients, Audience, and Rating.`;
     }
 
-    const chartInstruction = `\n\nREMINDER: If this is a comparison, generate a JSON block at the end with "type": "radar" if comparing attributes (flavor, texture, etc.) or "bar" for prices. Ensure numeric data is extracted accurately.`;
+    const chartInstruction = `\n\nREMINDER: If this is a comparison, generate a JSON block with "type": "radar" or "bar". ALSO generate a separate JSON block with "type": "comparison_data" for exporting the table rows/headers.`;
 
     const langInstruction = `\n\nIMPORTANT: Provide the response strictly in ${langName}. Translate all headers, table columns, and content to ${langName}.${attributeInstruction}${chartInstruction}`;
 
@@ -168,19 +182,26 @@ export const sendMessageStream = async (
     const collectedSources: GroundingChunk[] = [];
     const seenUris = new Set<string>();
     let parsedChartData: ChartData | undefined;
+    let parsedComparisonData: ComparisonData | undefined;
 
     for await (const chunk of result) {
       const c = chunk as GenerateContentResponse;
       const textChunk = c.text || '';
       fullText += textChunk;
 
-      // Try to extract JSON chart data if present at the end
-      const jsonMatch = fullText.match(/```json\s*(\{[\s\S]*?"type":\s*"(bar|radar)"[\s\S]*?\})\s*```/);
-      if (jsonMatch) {
+      // Extract all JSON blocks found in the text so far
+      const jsonRegex = /```json\s*(\{[\s\S]*?\})\s*```/g;
+      let match;
+      while ((match = jsonRegex.exec(fullText)) !== null) {
         try {
-            parsedChartData = JSON.parse(jsonMatch[1]);
+          const json = JSON.parse(match[1]);
+          if (json.type === 'bar' || json.type === 'radar') {
+            parsedChartData = json;
+          } else if (json.type === 'comparison_data') {
+            parsedComparisonData = json;
+          }
         } catch (e) {
-            // Incomplete JSON, wait for more chunks
+          // Incomplete JSON, ignore for now
         }
       }
 
@@ -200,7 +221,7 @@ export const sendMessageStream = async (
         });
       }
 
-      onChunk(fullText, [...collectedSources], parsedChartData);
+      onChunk(fullText, [...collectedSources], parsedChartData, parsedComparisonData);
     }
   } catch (error) {
     console.error("Error sending message to Gemini:", error);
