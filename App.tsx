@@ -22,6 +22,7 @@ const TEXTS = {
     input_placeholder_img: "Thêm chú thích...",
     disclaimer: "Gemini có thể đưa ra thông tin không chính xác. Hãy kiểm tra lại.",
     error_msg: "Xin lỗi, tôi gặp lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại.",
+    error_api_key: "Chưa cấu hình API Key. Vui lòng thêm API_KEY vào Settings trên Vercel.",
     comp_settings: "Tùy chọn so sánh",
     close: "Đóng",
     attrs: {
@@ -52,6 +53,7 @@ const TEXTS = {
     input_placeholder_img: "Add a caption...",
     disclaimer: "Gemini may display inaccurate info. Double-check its responses.",
     error_msg: "Sorry, I encountered an error while processing your request. Please try again.",
+    error_api_key: "API Key missing. Please add API_KEY to your Vercel Settings.",
     comp_settings: "Comparison Options",
     close: "Close",
     attrs: {
@@ -82,6 +84,7 @@ const TEXTS = {
     input_placeholder_img: "캡션 추가...",
     disclaimer: "Gemini는 부정확한 정보를 표시할 수 있습니다. 다시 확인하세요.",
     error_msg: "죄송합니다. 요청을 처리하는 중 오류가 발생했습니다. 다시 시도해 주세요.",
+    error_api_key: "API 키가 누락되었습니다. Vercel 설정에 API_KEY를 추가하세요.",
     comp_settings: "비교 옵션",
     close: "닫기",
     attrs: {
@@ -133,6 +136,32 @@ const App: React.FC = () => {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Handle Android Hardware Back Button (Close settings/image instead of exiting)
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (showSettings) {
+        setShowSettings(false);
+        // Prevent browser back navigation if we handled it
+        window.history.pushState(null, '', window.location.pathname);
+      } else if (selectedImage) {
+        setSelectedImage(null);
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    // When we open these states, push a state so back button has something to pop
+    if (showSettings || selectedImage) {
+       window.history.pushState({ overlay: true }, '', window.location.pathname);
+    }
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [showSettings, selectedImage]);
+
 
   // Auto-regenerate response when settings or language change
   useEffect(() => {
@@ -187,12 +216,16 @@ const App: React.FC = () => {
             )
           );
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to regenerate", error);
+      let errorText = T.error_msg;
+      if (error.message && error.message.includes('API_KEY')) {
+        errorText = T.error_api_key;
+      }
       setMessages(prev => 
         prev.map(msg => 
           msg.id === botMessageId 
-            ? { ...msg, text: T.error_msg } 
+            ? { ...msg, text: errorText } 
             : msg
         )
       );
@@ -227,6 +260,28 @@ const App: React.FC = () => {
         ? prev.filter(a => a !== attr)
         : [...prev, attr]
     );
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: T.title,
+          text: T.welcome_desc,
+          url: window.location.href,
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
+    } else {
+      // Copy to clipboard fallback
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Đã sao chép liên kết!');
+      } catch (err) {
+        // ignore
+      }
+    }
   };
 
   const handleSend = async (text: string) => {
@@ -274,12 +329,16 @@ const App: React.FC = () => {
             )
           );
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to get response", error);
+      let errorText = T.error_msg;
+      if (error.message && error.message.includes('API_KEY')) {
+        errorText = T.error_api_key;
+      }
       setMessages(prev => 
         prev.map(msg => 
           msg.id === botMessageId 
-            ? { ...msg, text: T.error_msg } 
+            ? { ...msg, text: errorText } 
             : msg
         )
       );
@@ -310,18 +369,18 @@ const App: React.FC = () => {
       <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleImageSelect} className="hidden" />
 
       {/* Header */}
-      <header className="bg-white border-b border-primary-100 px-4 md:px-6 py-4 shadow-sm z-10 flex items-center justify-between sticky top-0">
+      <header className="bg-white border-b border-primary-100 px-4 md:px-6 py-3 shadow-sm z-10 flex items-center justify-between sticky top-0">
         <div className="flex items-center gap-3">
           <div className="bg-primary-50 p-2 rounded-full">
             <span className="text-2xl">🍭</span>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">{T.title}</h1>
-            <p className="text-xs text-primary-600 font-medium hidden sm:block">{T.subtitle}</p>
+            <h1 className="text-lg md:text-xl font-bold text-gray-900 tracking-tight">{T.title}</h1>
+            <p className="text-[10px] md:text-xs text-primary-600 font-medium hidden sm:block">{T.subtitle}</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-3">
           {/* Language Selector */}
           <div className="flex items-center gap-1 bg-primary-50 p-1 rounded-lg border border-primary-100">
             {(['VN', 'EN', 'KR'] as Language[]).map((lang) => (
@@ -330,7 +389,7 @@ const App: React.FC = () => {
                 onClick={() => setLanguage(lang)}
                 disabled={isLoading}
                 className={`
-                  px-2 py-1 text-xs font-bold rounded-md transition-all duration-200
+                  px-2 py-1 text-[10px] md:text-xs font-bold rounded-md transition-all duration-200
                   ${language === lang 
                     ? 'bg-white text-primary-600 shadow-sm' 
                     : 'text-primary-400 hover:text-primary-600 hover:bg-primary-100/50'}
@@ -341,6 +400,17 @@ const App: React.FC = () => {
               </button>
             ))}
           </div>
+
+           {/* Share Button */}
+           <button
+            onClick={handleShare}
+            className="p-2 text-primary-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-colors"
+            title="Share App"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -430,7 +500,7 @@ const App: React.FC = () => {
 
           {/* Image Preview */}
           {selectedImage && (
-            <div className="absolute bottom-full left-0 mb-2 p-2 bg-white rounded-xl shadow-lg border border-primary-100 flex items-start gap-2 animate-fade-in-up">
+            <div className="absolute bottom-full left-0 mb-2 p-2 bg-white rounded-xl shadow-lg border border-primary-100 flex items-start gap-2 animate-fade-in-up z-20">
               <img src={selectedImage} alt="Preview" className="h-20 w-20 object-cover rounded-lg" />
               <button 
                 onClick={() => setSelectedImage(null)}

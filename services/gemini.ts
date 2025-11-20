@@ -112,6 +112,10 @@ export const sendMessageStream = async (
   comparisonAttributes: ComparisonAttribute[],
   onChunk: (text: string, sources: GroundingChunk[], chartData?: ChartData) => void
 ) => {
+  if (!process.env.API_KEY) {
+      throw new Error("API_KEY_MISSING");
+  }
+
   const chat = getChatSession();
   
   try {
