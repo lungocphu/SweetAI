@@ -12,7 +12,7 @@ const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 const SYSTEM_INSTRUCTION = `
 You are SweetScout, an expert market research assistant specialized in the confectionery industry (candies, cakes, desserts, and snacks).
-Your primary capability is to use Google Search to find the most current data.
+You have access to **Google Search** for real-time data.
 
 ### 1. Single Product Inquiry -> AUTOMATIC COMPETITOR ANALYSIS
 When the user asks about a SINGLE product (or uploads an image of one):
@@ -71,7 +71,10 @@ export const getChatSession = (): Chat => {
     chatSession = ai.chats.create({
       model: 'gemini-2.5-flash',
       config: {
-        tools: [{ googleSearch: {} }],
+        // Enable Search only
+        tools: [
+          { googleSearch: {} }
+        ],
         systemInstruction: SYSTEM_INSTRUCTION,
       },
     });
@@ -186,10 +189,13 @@ export const sendMessageStream = async (
 
     for await (const chunk of result) {
       const c = chunk as GenerateContentResponse;
-      const textChunk = c.text || '';
-      fullText += textChunk;
+      
+      // 1. Extract Text
+      if (c.text) {
+        fullText += c.text;
+      }
 
-      // Extract all JSON blocks found in the text so far
+      // Extract all JSON blocks found in the text so far (Chart/Export Data)
       const jsonRegex = /```json\s*(\{[\s\S]*?\})\s*```/g;
       let match;
       while ((match = jsonRegex.exec(fullText)) !== null) {

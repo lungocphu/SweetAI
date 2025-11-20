@@ -10,11 +10,11 @@ const TEXTS = {
     title: "SweetScout AI",
     subtitle: "Nghiên cứu & So sánh Thị trường",
     welcome_title: "Chào mừng bạn đến với SweetScout!",
-    welcome_desc: "So sánh sản phẩm, phân tích hương vị và kiểm tra giá cả. Tải lên ảnh hoặc hỏi tôi bất cứ điều gì về bánh kẹo!",
+    welcome_desc: "So sánh sản phẩm, phân tích hương vị và kiểm tra giá cả. Thông tin cập nhật theo thời gian thực!",
     try_these: "Thử mẫu:",
     suggestions: [
       "So sánh bánh Chocopie và Custas",
-      "Kẹo dẻo Haribo có những vị nào?",
+      "Tính giá trung bình 100g kẹo dẻo",
       "Tìm hiểu về bánh Mochi Nhật Bản",
       "Review các loại snack rong biển"
     ],
@@ -54,11 +54,11 @@ const TEXTS = {
     title: "SweetScout AI",
     subtitle: "Market Research & Comparisons",
     welcome_title: "Welcome to SweetScout!",
-    welcome_desc: "Compare products, analyze flavors, and check prices. Upload a photo or ask me anything about candies and cakes!",
+    welcome_desc: "Compare products, analyze flavors, and check prices. Real-time market insights!",
     try_these: "Try these:",
     suggestions: [
       "Compare Chocopie and Custas",
-      "What flavors does Haribo have?",
+      "Calculate avg price of jelly per 100g",
       "Tell me about Japanese Mochi",
       "Review seaweed snacks"
     ],
@@ -98,11 +98,11 @@ const TEXTS = {
     title: "SweetScout AI",
     subtitle: "시장 조사 및 비교",
     welcome_title: "SweetScout에 오신 것을 환영합니다!",
-    welcome_desc: "제품을 비교하고 맛을 분석하며 가격을 확인하세요. 사진을 업로드하거나 사탕과 케이크에 대해 무엇이든 물어보세요!",
+    welcome_desc: "제품을 비교하고 맛을 분석하며 가격을 확인하세요. 실시간 시장 정보를 제공합니다!",
     try_these: "추천 질문:",
     suggestions: [
       "초코파이와 카스타드 비교",
-      "하리보 젤리는 어떤 맛이 있나요?",
+      "젤리 100g당 평균 가격 계산",
       "일본 모찌에 대해 알려줘",
       "김 스낵 리뷰"
     ],
