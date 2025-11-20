@@ -50,7 +50,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, language }) => {
       ...comparisonData.rows.map(row => row.map(escapeCsv).join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Add BOM (\uFEFF) so Excel opens UTF-8 files correctly
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -115,6 +116,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, language }) => {
                   <button 
                     onClick={handleDownloadCSV}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 text-xs font-medium hover:bg-green-100 transition-colors"
+                    title="Download as CSV for Excel"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -124,6 +126,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, language }) => {
                   <button 
                     onClick={handleDownloadJSON}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs font-medium hover:bg-blue-100 transition-colors"
+                    title="Download as JSON"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />

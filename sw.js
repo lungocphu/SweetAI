@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'sweetscout-v4';
+const CACHE_NAME = 'sweetscout-v6';
 const urlsToCache = [
   './',
   './index.html',

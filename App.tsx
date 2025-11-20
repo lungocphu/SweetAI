@@ -22,7 +22,7 @@ const TEXTS = {
     input_placeholder_img: "Thêm chú thích...",
     disclaimer: "Gemini có thể đưa ra thông tin không chính xác. Hãy kiểm tra lại.",
     error_msg: "Xin lỗi, tôi gặp lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại.",
-    error_api_key: "Chưa cấu hình API Key. Vui lòng thêm API_KEY vào Settings trên Vercel.",
+    error_api_key: "Chưa cấu hình API Key. Vui lòng xem hướng dẫn (ℹ️) để thiết lập.",
     comp_settings: "Tùy chọn so sánh",
     close: "Đóng",
     attrs: {
@@ -35,7 +35,20 @@ const TEXTS = {
       pros_cons: "Ưu/Nhược điểm",
       product_profile: "Hồ sơ SP",
       social_reviews: "Đánh giá MXH"
-    }
+    },
+    help_title: "Hướng dẫn Cài đặt",
+    help_s1: "1. Lấy API Key",
+    help_s1_desc: "Bạn cần có Gemini API Key để app hoạt động.",
+    help_get_key: "👉 Lấy API Key tại đây",
+    help_s2: "2. Cấu hình Vercel",
+    help_s2_desc: "Vào Settings > Environment Variables trên Vercel:",
+    help_s3: "3. Tạo App Mobile (APK)",
+    help_s3_desc: "Sau khi có web (vd: app.vercel.app):",
+    help_pwa_steps: [
+       "Vào pwabuilder.com",
+       "Dán link web & nhấn Start",
+       "Chọn Package for Install > Android"
+    ]
   },
   EN: {
     title: "SweetScout AI",
@@ -53,7 +66,7 @@ const TEXTS = {
     input_placeholder_img: "Add a caption...",
     disclaimer: "Gemini may display inaccurate info. Double-check its responses.",
     error_msg: "Sorry, I encountered an error while processing your request. Please try again.",
-    error_api_key: "API Key missing. Please add API_KEY to your Vercel Settings.",
+    error_api_key: "API Key missing. Please see the info (ℹ️) menu to setup.",
     comp_settings: "Comparison Options",
     close: "Close",
     attrs: {
@@ -66,7 +79,20 @@ const TEXTS = {
       pros_cons: "Pros/Cons",
       product_profile: "Profile",
       social_reviews: "Social Reviews"
-    }
+    },
+    help_title: "Deployment Guide",
+    help_s1: "1. Get API Key",
+    help_s1_desc: "You need a Google Gemini API Key.",
+    help_get_key: "👉 Get API Key here",
+    help_s2: "2. Configure Vercel",
+    help_s2_desc: "Go to Settings > Environment Variables in Vercel:",
+    help_s3: "3. Create Mobile App (APK)",
+    help_s3_desc: "Once deployed (e.g. app.vercel.app):",
+    help_pwa_steps: [
+       "Go to pwabuilder.com",
+       "Paste URL & click Start",
+       "Select Package for Install > Android"
+    ]
   },
   KR: {
     title: "SweetScout AI",
@@ -84,7 +110,7 @@ const TEXTS = {
     input_placeholder_img: "캡션 추가...",
     disclaimer: "Gemini는 부정확한 정보를 표시할 수 있습니다. 다시 확인하세요.",
     error_msg: "죄송합니다. 요청을 처리하는 중 오류가 발생했습니다. 다시 시도해 주세요.",
-    error_api_key: "API 키가 누락되었습니다. Vercel 설정에 API_KEY를 추가하세요.",
+    error_api_key: "API 키가 없습니다. 정보(ℹ️) 메뉴를 확인하여 설정하세요.",
     comp_settings: "비교 옵션",
     close: "닫기",
     attrs: {
@@ -97,7 +123,20 @@ const TEXTS = {
       pros_cons: "장단점",
       product_profile: "프로필",
       social_reviews: "소셜 리뷰"
-    }
+    },
+    help_title: "배포 가이드",
+    help_s1: "1. API 키 발급",
+    help_s1_desc: "Google Gemini API 키가 필요합니다.",
+    help_get_key: "👉 API 키 발급받기",
+    help_s2: "2. Vercel 설정",
+    help_s2_desc: "Vercel의 Settings > Environment Variables로 이동:",
+    help_s3: "3. 모바일 앱(APK) 만들기",
+    help_s3_desc: "배포 후 (예: app.vercel.app):",
+    help_pwa_steps: [
+       "pwabuilder.com 접속",
+       "URL 붙여넣기 및 Start 클릭",
+       "Package for Install > Android 선택"
+    ]
   }
 };
 
@@ -110,6 +149,7 @@ const App: React.FC = () => {
   
   // Comparison Attributes State
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false); // Help Modal State
   const [selectedAttributes, setSelectedAttributes] = useState<ComparisonAttribute[]>([
     'product_image', 'price', 'flavor', 'ingredients', 'reviews', 'pros_cons', 'social_reviews'
   ]);
@@ -137,12 +177,14 @@ const App: React.FC = () => {
     inputRef.current?.focus();
   }, []);
 
-  // Handle Android Hardware Back Button (Close settings/image instead of exiting)
+  // Handle Android Hardware Back Button
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      if (showSettings) {
+      if (showHelp) {
+        setShowHelp(false);
+        window.history.pushState(null, '', window.location.pathname);
+      } else if (showSettings) {
         setShowSettings(false);
-        // Prevent browser back navigation if we handled it
         window.history.pushState(null, '', window.location.pathname);
       } else if (selectedImage) {
         setSelectedImage(null);
@@ -152,15 +194,14 @@ const App: React.FC = () => {
 
     window.addEventListener('popstate', handlePopState);
 
-    // When we open these states, push a state so back button has something to pop
-    if (showSettings || selectedImage) {
+    if (showSettings || selectedImage || showHelp) {
        window.history.pushState({ overlay: true }, '', window.location.pathname);
     }
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [showSettings, selectedImage]);
+  }, [showSettings, selectedImage, showHelp]);
 
 
   // Auto-regenerate response when settings or language change
@@ -199,12 +240,11 @@ const App: React.FC = () => {
     ));
 
     try {
-      // Explicitly ask for regeneration with current context
       const updatePrompt = "Please regenerate the previous response. If it contained a comparison table, STRICTLY update the columns to match the current settings. If the language changed, translate the entire response.";
       
       await sendMessageStream(
         updatePrompt,
-        null, // Context is maintained by session
+        null,
         language,
         selectedAttributes,
         (textChunk, sources, chartData, comparisonData) => {
@@ -221,6 +261,7 @@ const App: React.FC = () => {
       let errorText = T.error_msg;
       if (error.message && error.message.includes('API_KEY')) {
         errorText = T.error_api_key;
+        setShowHelp(true); // Auto open help if key is missing
       }
       setMessages(prev => 
         prev.map(msg => 
@@ -274,7 +315,6 @@ const App: React.FC = () => {
         console.log('Error sharing:', error);
       }
     } else {
-      // Copy to clipboard fallback
       try {
         await navigator.clipboard.writeText(window.location.href);
         alert('Đã sao chép liên kết!');
@@ -289,7 +329,7 @@ const App: React.FC = () => {
 
     const currentImage = selectedImage;
     setSelectedImage(null); 
-    setShowSettings(false); // Close settings on send
+    setShowSettings(false);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -334,6 +374,7 @@ const App: React.FC = () => {
       let errorText = T.error_msg;
       if (error.message && error.message.includes('API_KEY')) {
         errorText = T.error_api_key;
+        setShowHelp(true);
       }
       setMessages(prev => 
         prev.map(msg => 
@@ -368,6 +409,63 @@ const App: React.FC = () => {
       <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
       <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleImageSelect} className="hidden" />
 
+      {/* Help Modal */}
+      {showHelp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button 
+              onClick={() => setShowHelp(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            
+            <h3 className="text-xl font-bold text-primary-800 mb-4 flex items-center gap-2">
+              <span className="text-2xl">ℹ️</span> {T.help_title}
+            </h3>
+            
+            <div className="space-y-4 text-sm text-gray-700">
+              {/* Step 1: Get Key */}
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                <strong className="block text-blue-800 mb-1">{T.help_s1}</strong>
+                <p>{T.help_s1_desc}</p>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-primary-600 underline font-medium block mt-1">
+                  {T.help_get_key}
+                </a>
+              </div>
+
+              {/* Step 2: Vercel */}
+              <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                 <strong className="block text-purple-800 mb-1">{T.help_s2}</strong>
+                 <p>{T.help_s2_desc}</p>
+                 <ul className="list-disc pl-5 mt-2 space-y-1 text-xs text-purple-900">
+                    <li><strong>Key:</strong> <code>API_KEY</code></li>
+                    <li><strong>Value:</strong> (Paste API Key)</li>
+                 </ul>
+              </div>
+
+              {/* Step 3: APK */}
+              <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                 <strong className="block text-green-800 mb-1">{T.help_s3}</strong>
+                 <p>{T.help_s3_desc}</p>
+                 <ol className="list-decimal pl-5 mt-2 space-y-1 text-xs text-green-900">
+                    {T.help_pwa_steps.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                 </ol>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowHelp(false)}
+              className="w-full mt-6 bg-primary-600 text-white py-2 rounded-xl font-bold hover:bg-primary-700 transition-colors"
+            >
+              {T.close}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-primary-100 px-4 md:px-6 py-3 shadow-sm z-10 flex items-center justify-between sticky top-0">
         <div className="flex items-center gap-3">
@@ -400,6 +498,17 @@ const App: React.FC = () => {
               </button>
             ))}
           </div>
+
+           {/* Info Button */}
+           <button
+            onClick={() => setShowHelp(true)}
+            className="p-2 text-primary-400 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-colors"
+            title="Guide / Settings Info"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
 
            {/* Share Button */}
            <button
