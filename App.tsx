@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Message, Language, ComparisonAttribute } from './types';
 import { sendMessageStream } from './services/gemini';
@@ -22,10 +23,6 @@ const TEXTS = {
     disclaimer: "Gemini có thể đưa ra thông tin không chính xác. Hãy kiểm tra lại.",
     error_msg: "Xin lỗi, tôi gặp lỗi khi xử lý yêu cầu của bạn. Vui lòng thử lại.",
     comp_settings: "Tùy chọn so sánh",
-    install_app: "Cài ứng dụng",
-    install_guide_title: "Cài đặt ứng dụng",
-    install_guide_android: "Nhấn vào biểu tượng 3 chấm ở góc phải trình duyệt -> Chọn 'Thêm vào màn hình chính' hoặc 'Cài đặt ứng dụng'.",
-    install_guide_ios: "Nhấn vào nút Chia sẻ (Share) -> Chọn 'Thêm vào màn hình chính' (Add to Home Screen).",
     close: "Đóng",
     attrs: {
       product_image: "Hình ảnh",
@@ -56,10 +53,6 @@ const TEXTS = {
     disclaimer: "Gemini may display inaccurate info. Double-check its responses.",
     error_msg: "Sorry, I encountered an error while processing your request. Please try again.",
     comp_settings: "Comparison Options",
-    install_app: "Install App",
-    install_guide_title: "Install App",
-    install_guide_android: "Tap the 3-dot menu -> Select 'Add to Home Screen' or 'Install App'.",
-    install_guide_ios: "Tap the Share button -> Select 'Add to Home Screen'.",
     close: "Close",
     attrs: {
       product_image: "Image",
@@ -90,10 +83,6 @@ const TEXTS = {
     disclaimer: "Gemini는 부정확한 정보를 표시할 수 있습니다. 다시 확인하세요.",
     error_msg: "죄송합니다. 요청을 처리하는 중 오류가 발생했습니다. 다시 시도해 주세요.",
     comp_settings: "비교 옵션",
-    install_app: "앱 설치",
-    install_guide_title: "앱 설치",
-    install_guide_android: "메뉴 버튼(점 3개)을 탭하세요 -> '홈 화면에 추가' 또는 '앱 설치'를 선택하세요.",
-    install_guide_ios: "공유 버튼을 탭하세요 -> '홈 화면에 추가'를 선택하세요.",
     close: "닫기",
     attrs: {
       product_image: "이미지",
@@ -122,10 +111,6 @@ const App: React.FC = () => {
     'product_image', 'price', 'flavor', 'ingredients', 'reviews', 'pros_cons', 'social_reviews'
   ]);
 
-  // PWA Install State
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallHelp, setShowInstallHelp] = useState(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -147,14 +132,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     inputRef.current?.focus();
-    
-    // PWA Install Prompt Listener
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   // Auto-regenerate response when settings or language change
@@ -181,19 +158,6 @@ const App: React.FC = () => {
     };
   }, [selectedAttributes, language]);
 
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setDeferredPrompt(null);
-      }
-    } else {
-      // Show manual instructions if prompt is not available
-      setShowInstallHelp(true);
-    }
-  };
-
   const handleRegenerateLastResponse = async () => {
     if (messages.length === 0) return;
     
@@ -214,11 +178,11 @@ const App: React.FC = () => {
         null, // Context is maintained by session
         language,
         selectedAttributes,
-        (textChunk, sources) => {
+        (textChunk, sources, chartData) => {
           setMessages(prev => 
             prev.map(msg => 
               msg.id === botMessageId 
-                ? { ...msg, text: textChunk, sources: sources } 
+                ? { ...msg, text: textChunk, sources: sources, chartData: chartData } 
                 : msg
             )
           );
@@ -301,11 +265,11 @@ const App: React.FC = () => {
         currentImage, 
         language, 
         selectedAttributes,
-        (textChunk, sources) => {
+        (textChunk, sources, chartData) => {
           setMessages(prev => 
             prev.map(msg => 
               msg.id === botMessageId 
-                ? { ...msg, text: textChunk, sources: sources } 
+                ? { ...msg, text: textChunk, sources: sources, chartData: chartData } 
                 : msg
             )
           );
@@ -345,36 +309,6 @@ const App: React.FC = () => {
       <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageSelect} className="hidden" />
       <input type="file" accept="image/*" capture="environment" ref={cameraInputRef} onChange={handleImageSelect} className="hidden" />
 
-      {/* Install Help Modal */}
-      {showInstallHelp && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-bold text-primary-800">{T.install_guide_title}</h3>
-              <button onClick={() => setShowInstallHelp(false)} className="text-gray-400 hover:text-gray-600">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div className="space-y-4 text-sm text-gray-700">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="font-bold text-gray-900 mb-1">Android (Chrome):</p>
-                <p>{T.install_guide_android}</p>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="font-bold text-gray-900 mb-1">iOS (Safari):</p>
-                <p>{T.install_guide_ios}</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setShowInstallHelp(false)}
-              className="w-full mt-6 bg-primary-600 text-white py-2 rounded-xl font-semibold hover:bg-primary-700 transition-colors"
-            >
-              {T.close}
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="bg-white border-b border-primary-100 px-4 md:px-6 py-4 shadow-sm z-10 flex items-center justify-between sticky top-0">
         <div className="flex items-center gap-3">
@@ -388,28 +322,6 @@ const App: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2 md:gap-4">
-          {/* PWA Install Button - Always visible */}
-          <button
-            onClick={handleInstallClick}
-            className="hidden md:flex items-center gap-1 bg-primary-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm hover:bg-primary-700 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            {T.install_app}
-          </button>
-          
-          {/* Mobile Install Icon */}
-          <button
-            onClick={handleInstallClick}
-            className="md:hidden bg-primary-50 text-primary-600 p-1.5 rounded-lg border border-primary-100 hover:bg-primary-100"
-            title={T.install_app}
-          >
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-          </button>
-
           {/* Language Selector */}
           <div className="flex items-center gap-1 bg-primary-50 p-1 rounded-lg border border-primary-100">
             {(['VN', 'EN', 'KR'] as Language[]).map((lang) => (

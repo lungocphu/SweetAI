@@ -1,6 +1,8 @@
-import React from 'react';
+
+import React, { useMemo } from 'react';
 import { Message, Language } from '../types';
 import MarkdownRenderer from './MarkdownRenderer';
+import ChartRenderer from './ChartRenderer';
 
 interface MessageBubbleProps {
   message: Message;
@@ -16,6 +18,31 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, language }) => {
     'KR': '출처'
   }[language];
 
+  // Separate Text content from JSON Chart Data if the API embedded it in the text
+  // (Though our service now parses it separately, we check both message.chartData and embedded JSON for robustness)
+  const { displayText, chartData } = useMemo(() => {
+    // If we already have parsed chart data from the service
+    if (message.chartData) {
+       // Clean the text just in case the JSON is still lingering at the bottom
+       const cleanText = message.text.replace(/```json\s*\{[\s\S]*?"type":\s*"(bar|radar)"[\s\S]*?\}\s*```$/, '').trim();
+       return { displayText: cleanText, chartData: message.chartData };
+    }
+
+    // Fallback: Try to parse from text if not yet extracted
+    const jsonMatch = message.text.match(/```json\s*(\{[\s\S]*?"type":\s*"(bar|radar)"[\s\S]*?\})\s*```/);
+    if (jsonMatch) {
+      try {
+        const data = JSON.parse(jsonMatch[1]);
+        const cleanText = message.text.replace(jsonMatch[0], '').trim();
+        return { displayText: cleanText, chartData: data };
+      } catch (e) {
+        return { displayText: message.text, chartData: undefined };
+      }
+    }
+    
+    return { displayText: message.text, chartData: undefined };
+  }, [message.text, message.chartData]);
+
   return (
     <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
       <div
@@ -26,7 +53,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, language }) => {
             : 'bg-white border border-primary-100 text-gray-800 rounded-bl-none'}
         `}
       >
-        {/* Attached Image (User only mostly, but supports model too) */}
+        {/* Attached Image */}
         {message.image && (
           <div className="mb-3 -mx-5 -mt-4">
             <img 
@@ -40,9 +67,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, language }) => {
         {/* Message Content */}
         <div className={`text-sm md:text-base ${isUser ? 'text-white' : ''}`}>
           {isUser ? (
-            <p>{message.text}</p>
+            <p>{displayText}</p>
           ) : (
-            <MarkdownRenderer content={message.text} />
+            <>
+              <MarkdownRenderer content={displayText} />
+              {/* Chart Rendering */}
+              {chartData && (
+                <div className="mt-4 animate-fade-in-up">
+                  <ChartRenderer data={chartData} />
+                </div>
+              )}
+            </>
           )}
         </div>
 

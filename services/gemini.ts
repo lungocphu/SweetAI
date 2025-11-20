@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
-import { GroundingChunk, Language, ComparisonAttribute } from "../types";
+import { GroundingChunk, Language, ComparisonAttribute, ChartData } from "../types";
 
 const apiKey = process.env.API_KEY;
 
@@ -17,18 +18,35 @@ Your primary capability is to use Google Search to find the most current data.
 When the user asks about a SINGLE product (or uploads an image of one):
 1.  **Find Competitors**: You MUST automatically identify **3 direct competitor products** currently in the market.
 2.  **Compare**: Create a comparison table including the **Main Product + 3 Competitors**.
-3.  **Comparative Analysis**: After the table, provide a detailed section on **Comparative Advantages & Disadvantages** (Lợi thế & Bất lợi cạnh tranh). Analyze how the main product stacks up against competitors based on **Price, Flavor, Ingredients, Reviews, and Target Audience**.
-4.  **Improve**: Provide a section on **Quality Improvements** (Hướng cải thiện chất lượng) to help the product compete better.
+3.  **Comparative Analysis**: After the table, provide a detailed section on **Comparative Advantages & Disadvantages**.
+4.  **Improve**: Provide a section on **Quality Improvements**.
 
 ### 2. Multiple Product Comparison
 If the user explicitly asks to compare specific products:
 1.  Generate the comparison table for those items.
-2.  **Comparative Analysis**: Provide a section analyzing the **Comparative Advantages & Disadvantages** of each product relative to the others. Synthesize insights from the comparison table.
+2.  **Comparative Analysis**: Provide a section analyzing the **Comparative Advantages & Disadvantages**.
+
+### 3. Visualization (CRITICAL)
+When comparing products, you MUST provide data to generate a chart at the end of your response.
+- Use **'bar'** type for quantitative comparisons like Price, Calories, Weight.
+- Use **'radar'** type for qualitative scores (1-10 scale) like Flavor, Texture, Sweetness, Packaging, Value.
+- **IMPORTANT**: Output the chart data as a **JSON code block** at the VERY END of your response.
+- **JSON Format**:
+\`\`\`json
+{
+  "type": "bar", // or "radar"
+  "title": "Price & Rating Comparison",
+  "categories": ["Price (k VND)", "Rating (1-5)", "Sweetness (1-10)"], 
+  "series": [
+    { "label": "Product A", "data": [15, 4.5, 8] },
+    { "label": "Product B", "data": [12, 4.0, 6] }
+  ]
+}
+\`\`\`
 
 ### General Rules
-- **Language**: Output response in the requested language (VN/EN/KR).
-- **Translation**: Ensure all headers, table columns, and content are in the target language.
-- **Formatting**: Use Markdown (Bold, Lists, Tables).
+- **Language**: Output text in the requested language (VN/EN/KR).
+- **Formatting**: Use Markdown.
 - **Search**: Always use the search tool to get the latest prices and reviews.
 `;
 
@@ -92,7 +110,7 @@ export const sendMessageStream = async (
   imageBase64: string | null,
   language: Language,
   comparisonAttributes: ComparisonAttribute[],
-  onChunk: (text: string, sources: GroundingChunk[]) => void
+  onChunk: (text: string, sources: GroundingChunk[], chartData?: ChartData) => void
 ) => {
   const chat = getChatSession();
   
@@ -111,13 +129,14 @@ export const sendMessageStream = async (
         imageInstruction = " For the 'Image' column, you MUST search for a valid public URL of the product packaging/content and display it using Markdown image syntax: `![Product Name](URL)`. Prefer simple, direct image links.";
       }
       
-      // Strictly instruct the model to use these headers
-      attributeInstruction = `\n\nFOR COMPARISON TABLES: You MUST create a Markdown table. The columns MUST be strictly: "${productNameHeader}", ${columns}. Do not add other columns unless asked. Use visual indicators (e.g., ✅, ❌, ⚠️, ⭐) within the table cells to highlight differences in key attributes (like Pros/Cons, Availability, or Rating).${imageInstruction}`;
+      attributeInstruction = `\n\nFOR COMPARISON TABLES: You MUST create a Markdown table. The columns MUST be strictly: "${productNameHeader}", ${columns}. Do not add other columns unless asked. ${imageInstruction}`;
     } else {
-      attributeInstruction = `\n\nFOR COMPARISON TABLES: Include columns for Price, Flavor, Ingredients, Audience, and Rating. Use visual indicators (e.g., ✅, ❌, ⚠️, ⭐) within the table cells to highlight differences.`;
+      attributeInstruction = `\n\nFOR COMPARISON TABLES: Include columns for Price, Flavor, Ingredients, Audience, and Rating.`;
     }
 
-    const langInstruction = `\n\nIMPORTANT: Provide the response strictly in ${langName}. Translate all headers, table columns, and content to ${langName}.${attributeInstruction}`;
+    const chartInstruction = `\n\nREMINDER: If this is a comparison, generate a JSON block at the end with "type": "radar" if comparing attributes (flavor, texture, etc.) or "bar" for prices. Ensure numeric data is extracted accurately.`;
+
+    const langInstruction = `\n\nIMPORTANT: Provide the response strictly in ${langName}. Translate all headers, table columns, and content to ${langName}.${attributeInstruction}${chartInstruction}`;
 
     let msgPayload: any = message + langInstruction;
 
@@ -144,11 +163,22 @@ export const sendMessageStream = async (
     let fullText = '';
     const collectedSources: GroundingChunk[] = [];
     const seenUris = new Set<string>();
+    let parsedChartData: ChartData | undefined;
 
     for await (const chunk of result) {
       const c = chunk as GenerateContentResponse;
       const textChunk = c.text || '';
       fullText += textChunk;
+
+      // Try to extract JSON chart data if present at the end
+      const jsonMatch = fullText.match(/```json\s*(\{[\s\S]*?"type":\s*"(bar|radar)"[\s\S]*?\})\s*```/);
+      if (jsonMatch) {
+        try {
+            parsedChartData = JSON.parse(jsonMatch[1]);
+        } catch (e) {
+            // Incomplete JSON, wait for more chunks
+        }
+      }
 
       // Extract grounding chunks if available
       const groundingChunks = c.candidates?.[0]?.groundingMetadata?.groundingChunks;
@@ -166,7 +196,7 @@ export const sendMessageStream = async (
         });
       }
 
-      onChunk(fullText, [...collectedSources]);
+      onChunk(fullText, [...collectedSources], parsedChartData);
     }
   } catch (error) {
     console.error("Error sending message to Gemini:", error);

@@ -1,13 +1,15 @@
+
 {
   "name": "SweetScout AI",
   "short_name": "SweetScout",
   "description": "Trợ lý nghiên cứu thị trường bánh kẹo AI - So sánh giá, vị và xu hướng.",
   "id": "/",
-  "start_url": "./",
+  "start_url": "./?utm_source=web_app_manifest",
   "display": "standalone",
   "background_color": "#fffdf5",
   "theme_color": "#db2777",
   "orientation": "portrait-primary",
+  "categories": ["productivity", "food", "lifestyle"],
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2553/2553691.png",
@@ -20,6 +22,15 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Chụp ảnh",
+      "short_name": "Camera",
+      "description": "Chụp ảnh sản phẩm để phân tích",
+      "url": "./?action=camera",
+      "icons": [{ "src": "https://cdn-icons-png.flaticon.com/512/2553/2553691.png", "sizes": "192x192" }]
     }
   ]
 }

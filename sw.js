@@ -1,4 +1,5 @@
-const CACHE_NAME = 'sweetscout-v2';
+
+const CACHE_NAME = 'sweetscout-v3';
 const urlsToCache = [
   './',
   './index.html',
@@ -16,15 +17,15 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // For API requests or non-GET requests, always go to network
-  if (event.request.method !== 'GET' || event.request.url.includes('/gemini') || event.request.url.includes('google')) {
+  // For API requests, Gemini calls, or non-GET requests, always go to network
+  if (event.request.method !== 'GET' || event.request.url.includes('/gemini') || event.request.url.includes('google') || event.request.url.includes('aistudiocdn')) {
     return;
   }
 
+  // Network First strategy for HTML/JS to ensure updates are seen immediately
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Update cache with new response if valid
         if (!response || response.status !== 200 || response.type !== 'basic') {
           return response;
         }
